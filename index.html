@@ -3,66 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tool Selection Portal</title>
+    <title>Waukesha Tool Request Portal</title>
     <style>
-        body { font-family: -apple-system, sans-serif; padding: 20px; background: #f4f7f6; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; }
-        .tool-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; }
-        .tool-item:last-child { border-bottom: none; }
-        input[type="checkbox"] { transform: scale(1.5); margin-right: 15px; cursor: pointer; }
-        .btn-submit { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 20px; cursor: pointer; }
-        #result-area { display: none; margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 8px; border: 1px dashed #6c757d; }
-        .copy-btn { background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 4px; float: right; cursor: pointer; }
+        :root { --main: #d32f2f; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 10px; }
+        .container { max-width: 600px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding: 20px; }
+        .sticky-header { position: sticky; top: 0; background: white; z-index: 100; padding-bottom: 10px; border-bottom: 2px solid var(--main); }
+        h2 { color: var(--main); text-align: center; margin-bottom: 15px; }
+        .search-box { width: 100%; padding: 12px; margin-top: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; outline: none; }
+        .search-box:focus { border-color: var(--main); }
+        .cat-title { background: #333; color: white; padding: 8px 15px; font-size: 14px; font-weight: bold; margin-top: 20px; border-radius: 6px; }
+        .tool-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; transition: 0.2s; cursor: pointer; }
+        .tool-item:hover { background: #fff5f5; }
+        .tool-item input { width: 22px; height: 22px; margin-right: 15px; accent-color: var(--main); }
+        .btn-gen { width: 100%; padding: 18px; background: var(--main); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 25px; box-shadow: 0 4px 10px rgba(211, 47, 47, 0.3); }
+        #summary-box { display: none; margin-top: 25px; padding: 15px; background: #fffde7; border: 2px dashed #fbc02d; border-radius: 8px; position: relative; }
+        pre { white-space: pre-wrap; font-family: 'Courier New', Courier, monospace; font-size: 13px; line-height: 1.4; }
+        .copy-btn { position: absolute; top: 10px; right: 10px; background: #444; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Select Required Tools</h2>
-    <div id="tool-list">
-        <label class="tool-item"><input type="checkbox" value="Unity Pro"> Unity Pro</label>
-        <label class="tool-item"><input type="checkbox" value="Visual Studio 2022"> Visual Studio 2022</label>
-        <label class="tool-item"><input type="checkbox" value="Adobe Photoshop"> Adobe Photoshop</label>
-        <label class="tool-item"><input type="checkbox" value="Blender"> Blender</label>
-        <label class="tool-item"><input type="checkbox" value="Git Desktop"> Git Desktop</label>
+    <div class="sticky-header">
+        <h2>PM TOOL REQUISITION</h2>
+        <input type="text" id="engine" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:5px;" placeholder="Engine Model / Unit No.">
+        <input type="text" id="search" class="search-box" placeholder="🔍 Search 150+ tools (e.g. Liner, Torque, VHP)..." onkeyup="filterTools()">
     </div>
 
-    <button class="btn-submit" onclick="generateList()">Generate Final List</button>
+    <div id="tool-container">Loading 150+ tools...</div>
 
-    <div id="result-area">
-        <button class="copy-btn" onclick="copyText()">Copy</button>
-        <strong>Selected Tools:</strong>
-        <div id="final-selection" style="margin-top: 10px; white-space: pre-wrap;"></div>
+    <button class="btn-gen" onclick="generate()">Submit Requisition</button>
+
+    <div id="summary-box">
+        <button class="copy-btn" onclick="copy()">Copy to Clipboard</button>
+        <pre id="output-text"></pre>
     </div>
 </div>
 
 <script>
-    function generateList() {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
-        const resultDiv = document.getElementById('result-area');
-        const textDiv = document.getElementById('final-selection');
-        
-        if (checkboxes.length === 0) {
-            alert("Please select at least one tool.");
-            return;
-        }
+    let tools = [];
+    async function init() {
+        const response = await fetch('tools.json');
+        tools = await response.json();
+        render();
+    }
 
-        let selected = [];
-        checkboxes.forEach((cb) => {
-            selected.push("• " + cb.value);
+    function render() {
+        const container = document.getElementById('tool-container');
+        const groups = tools.reduce((acc, t) => {
+            (acc[t.category] = acc[t.category] || []).push(t);
+            return acc;
+        }, {});
+
+        let html = '';
+        for (const cat in groups) {
+            html += `<div class="cat-section" data-cat="${cat}">
+                        <div class="cat-title">${cat.toUpperCase()}</div>`;
+            groups[cat].forEach(t => {
+                html += `<label class="tool-item" data-name="${t.name.toLowerCase()}">
+                            <input type="checkbox" value="${t.name}" data-cat="${cat}">
+                            ${t.name}
+                         </label>`;
+            });
+            html += `</div>`;
+        }
+        container.innerHTML = html;
+    }
+
+    function filterTools() {
+        const query = document.getElementById('search').value.toLowerCase();
+        const items = document.querySelectorAll('.tool-item');
+        items.forEach(item => {
+            const text = item.getAttribute('data-name');
+            item.style.display = text.includes(query) ? 'flex' : 'none';
+        });
+    }
+
+    function generate() {
+        const engine = document.getElementById('engine').value || "Unit Not Specified";
+        const selected = document.querySelectorAll('input:checked');
+        if (selected.length === 0) return alert("Please select tools!");
+
+        let res = `🛠 WAUKESHA TOOL LIST\nUnit: ${engine}\nDate: ${new Date().toLocaleDateString()}\n`;
+        let curCat = "";
+        
+        selected.forEach(cb => {
+            let cat = cb.getAttribute('data-cat');
+            if (cat !== curCat) {
+                curCat = cat;
+                res += `\n[${curCat}]\n`;
+            }
+            res += `• ${cb.value}\n`;
         });
 
-        textDiv.innerText = selected.join('\n');
-        resultDiv.style.display = 'block';
+        document.getElementById('output-text').innerText = res;
+        document.getElementById('summary-box').style.display = 'block';
         window.scrollTo(0, document.body.scrollHeight);
     }
 
-    function copyText() {
-        const text = document.getElementById('final-selection').innerText;
-        navigator.clipboard.writeText(text);
-        alert("List copied to clipboard!");
+    function copy() {
+        navigator.clipboard.writeText(document.getElementById('output-text').innerText);
+        alert("List copied successfully!");
     }
+    init();
 </script>
 
 </body>
