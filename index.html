@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tool Selection Portal</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; padding: 20px; background: #f4f7f6; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        .tool-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .tool-item:last-child { border-bottom: none; }
+        input[type="checkbox"] { transform: scale(1.5); margin-right: 15px; cursor: pointer; }
+        .btn-submit { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 20px; cursor: pointer; }
+        #result-area { display: none; margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 8px; border: 1px dashed #6c757d; }
+        .copy-btn { background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 4px; float: right; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Select Required Tools</h2>
+    <div id="tool-list">
+        <label class="tool-item"><input type="checkbox" value="Unity Pro"> Unity Pro</label>
+        <label class="tool-item"><input type="checkbox" value="Visual Studio 2022"> Visual Studio 2022</label>
+        <label class="tool-item"><input type="checkbox" value="Adobe Photoshop"> Adobe Photoshop</label>
+        <label class="tool-item"><input type="checkbox" value="Blender"> Blender</label>
+        <label class="tool-item"><input type="checkbox" value="Git Desktop"> Git Desktop</label>
+    </div>
+
+    <button class="btn-submit" onclick="generateList()">Generate Final List</button>
+
+    <div id="result-area">
+        <button class="copy-btn" onclick="copyText()">Copy</button>
+        <strong>Selected Tools:</strong>
+        <div id="final-selection" style="margin-top: 10px; white-space: pre-wrap;"></div>
+    </div>
+</div>
+
+<script>
+    function generateList() {
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+        const resultDiv = document.getElementById('result-area');
+        const textDiv = document.getElementById('final-selection');
+        
+        if (checkboxes.length === 0) {
+            alert("Please select at least one tool.");
+            return;
+        }
+
+        let selected = [];
+        checkboxes.forEach((cb) => {
+            selected.push("• " + cb.value);
+        });
+
+        textDiv.innerText = selected.join('\n');
+        resultDiv.style.display = 'block';
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function copyText() {
+        const text = document.getElementById('final-selection').innerText;
+        navigator.clipboard.writeText(text);
+        alert("List copied to clipboard!");
+    }
+</script>
+
+</body>
+</html>
